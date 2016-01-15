@@ -17,7 +17,9 @@
 #
 
 from pymogile import Client
+from tornado.concurrent import return_future
 
+@return_future
 def load(context, path, callback):
     domain = context.config.MOGILEFS_STORAGE_DOMAIN
     trackers = context.config.MOGILEFS_STORAGE_TRACKERS
