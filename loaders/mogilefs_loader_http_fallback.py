@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Copyright (c) 2014 Max Oberberger (max@oberbergers.de)
+# Copyright (c) 2017 Max Oberberger (max@oberbergers.de)
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,22 +16,18 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from pymogile import Client
+from . import http_loader
+from . import mogilefs_loader
 from tornado.concurrent import return_future
-from . import LoaderResult
 
 @return_future
 def load(context, path, callback):
-    domain = context.config.MOGILEFS_STORAGE_DOMAIN
-    trackers = context.config.MOGILEFS_STORAGE_TRACKERS
-    storage = Client(domain=domain, trackers=trackers)
+    def callback_wrapper(result):
+        if result.successful:
+            callback(result)
+        else:
+            # If mogilefs_loader failed try http_loader
+            http_loader.load(context, path, callback)
 
-    result = LoaderResult()
-    if not storage.get_file_data(path):
-        result.error = LoaderResult.ERROR_NOT_FOUND
-        result.successful = False
-    else:
-        result.successful = True
-        result.buffer = storage.get_file_data(path)
-
-    callback(result)
+    # First attempt to load with mogilefs_loader
+    mogilefs_loader.load(context, path, callback_wrapper)
