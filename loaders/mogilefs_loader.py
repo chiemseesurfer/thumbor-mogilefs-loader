@@ -19,6 +19,7 @@
 from pymogile import Client
 from tornado.concurrent import return_future
 from . import LoaderResult
+from thumbor.utils import logger
 
 @return_future
 def load(context, path, callback):
@@ -27,11 +28,18 @@ def load(context, path, callback):
     storage = Client(domain=domain, trackers=trackers)
 
     result = LoaderResult()
-    if not storage.get_file_data(path):
-        result.error = LoaderResult.ERROR_NOT_FOUND
-        result.successful = False
-    else:
+
+    result.successful = False
+
+    try:
+        response = storage.get_file_data(path)
         result.successful = True
-        result.buffer = storage.get_file_data(path)
+        result.buffer = response
+    except pymogile.MogileFSError as e:
+        result.error = LoaderResult.ERROR_NOT_FOUND
+        logger.error(u"retrieving image {0}: {1}".format(path, e))
+    except Exception as e:
+        result.error = LoaderResult.ERROR_UPSTREAM
+        logger.error(u"retrieving image {0}: {1}".format(path, e)
 
     callback(result)
